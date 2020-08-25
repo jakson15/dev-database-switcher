@@ -1,11 +1,6 @@
 <?php
 /**
- * The plugin bootstrap file
- *
- * This file is read by WordPress to generate the plugin information in the plugin
- * admin area. This file also includes all of the dependencies used by the plugin,
- * registers the activation and deactivation functions, and defines a function
- * that starts the plugin.
+ * The main plugin file.
  *
  * @link              https://github.com/jakson15
  * @since             1.0.0
@@ -14,14 +9,13 @@
  * @wordpress-plugin
  * Plugin Name:       DEV Database Switcher
  * Plugin URI:        https://github.com/jakson15/dev-database-switcher
- * Description:       This is a short description of what the plugin does. It's displayed in the WordPress admin area.
+ * Description:       Simple plugin to switch between local and remote database by one click.
  * Version:           1.0.0
  * Author:            Piotr Josko
  * Author URI:        https://github.com/jakson15
  * License:           GPL-3.0+
  * License URI:       http://www.gnu.org/licenses/gpl-3.0.txt
  * Text Domain:       dev-database-switcher
- * Domain Path:       /languages
  */
 
 // If this file is called directly, abort.
@@ -37,45 +31,89 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'DEV_DATABASE_SWITCHER_VERSION', '1.0.0' );
 
 /**
- * The code that runs during plugin activation.
- * This action is documented in includes/class-dev-database-switcher-activator.php
+ * Fries during plugin activation.
  */
-function activate_dev_database_switcher() {
-	require_once plugin_dir_path( __FILE__ ) . 'includes/class-dev-database-switcher-activator.php';
-	Dev_Database_Switcher_Activator::activate();
+function dbs_plugin_activate() {
+
+	add_option( 'dds_database_type', 'local' );
 }
+register_activation_hook( __FILE__, 'dds_plugin_activate' );
 
 /**
- * The code that runs during plugin deactivation.
- * This action is documented in includes/class-dev-database-switcher-deactivator.php
+ * Dashboard admin info if proper file does not exists.
  */
-function deactivate_dev_database_switcher() {
-	require_once plugin_dir_path( __FILE__ ) . 'includes/class-dev-database-switcher-deactivator.php';
-	Dev_Database_Switcher_Deactivator::deactivate();
+function remote_database_config_exists() {
+		$class   = 'notice notice-error';
+		$message = __( 'Some file missed. Create proper wp-config.php file to switch database.', 'dev-database-switcher' );
+
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
 }
-
-register_activation_hook( __FILE__, 'activate_dev_database_switcher' );
-register_deactivation_hook( __FILE__, 'deactivate_dev_database_switcher' );
-
 /**
- * The core plugin class that is used to define internationalization,
- * admin-specific hooks, and public-facing site hooks.
- */
-require plugin_dir_path( __FILE__ ) . 'includes/class-dev-database-switcher.php';
-
-/**
- * Begins execution of the plugin.
+ * Add admin bar switcher.
  *
- * Since everything within the plugin is registered via hooks,
- * then kicking off the plugin from this point in the file does
- * not affect the page life cycle.
- *
- * @since    1.0.0
+ * @param WP_Admin_Bar $admin_bar WP_Admin_Bar instance, passed by reference.
  */
-function run_dev_database_switcher() {
+function dds_admin_bar_switcher( $admin_bar ) {
+	$database_type = get_option( 'dds_database_type', 'local' );
+	$changed_db    = 'local' === $database_type ? 'remote' : 'local';
 
-	$plugin = new Dev_Database_Switcher();
-	$plugin->run();
+	$admin_bar->add_menu(
+		array(
+			'id'    => 'dds-database-type',
+			'title' => strtoupper( $database_type ) . ' DB',
+			'meta'  => array(
+				'title' => strtoupper( get_option( 'dbs_database_type', 'local' ) ) . ' DB',
+			),
+		)
+	);
 
+	$admin_bar->add_menu(
+		array(
+			'id'     => 'dds-database-type-change',
+			'parent' => 'dds-database-type',
+			'title'  => strtoupper( 'local' === $database_type ? 'remote' : 'local' ) . ' DB',
+			'href'   => admin_url() . '?database_type=' . $changed_db,
+			'meta'   => array(
+				'title' => strtoupper( 'local' === $database_type ? 'remote' : 'local' ) . ' DB',
+			),
+		)
+	);
 }
-run_dev_database_switcher();
+
+add_action( 'admin_bar_menu', 'dds_admin_bar_switcher', 100 );
+
+/**
+ * Changes databases based on wp-config.php files.
+ */
+function change_database() {
+
+	if ( ! empty( $_GET['database_type'] ) ) {
+		$database_type = get_option( 'dds_database_type', 'local' );
+		if ( 'local' === $_GET['database_type'] && 'remote' === $database_type ) {
+
+			if ( file_exists( ABSPATH . 'wp-config-local.php' ) ) {
+				rename( ABSPATH . 'wp-config.php', ABSPATH . 'wp-config-remote.php' );
+				rename( ABSPATH . 'wp-config-local.php', ABSPATH . 'wp-config.php' );
+
+				update_option( 'dds_database_type', 'local' );
+
+				wp_safe_redirect( admin_url() );
+			} else {
+				add_action( 'admin_notices', 'remote_database_config_exists' );
+			}
+		} elseif ( 'remote' === $_GET['database_type'] && 'local' === $database_type ) {
+			if ( file_exists( ABSPATH . 'wp-config-remote.php' ) ) {
+				rename( ABSPATH . 'wp-config.php', ABSPATH . 'wp-config-local.php' );
+				rename( ABSPATH . 'wp-config-remote.php', ABSPATH . 'wp-config.php' );
+
+				update_option( 'dds_database_type', 'remote' );
+
+				wp_safe_redirect( admin_url() );
+			}  else {
+				add_action( 'admin_notices', 'remote_database_config_exists' );
+			}
+		}
+	}
+}
+
+add_action( 'init', 'change_database' );
