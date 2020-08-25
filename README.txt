@@ -12,5 +12,5 @@ Simple plugin to switch between local and remote database by one click.
 
 == Description ==
 
-Create wp-config-remote.php file with remote database access and switch between from admin bar.
+Create wp-config-remote.php file with remote database access and switch between them from admin bar.
 
