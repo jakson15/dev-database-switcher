@@ -128,9 +128,8 @@ add_action( 'init', 'check_active_database', 1 );
  * @param string                $password User password.
  */
 function auto_login( $user, $username, $password ) {
-	if ( defined( 'LOGIN_USERNAME' ) ) {
-		$username = LOGIN_USERNAME;
-	}
+	$username = defined( 'LOGIN_USERNAME' ) && ! $user ? LOGIN_USERNAME : '';
+
 	if ( ! $user ) {
 		$user = get_user_by( 'email', $username );
 	}
