@@ -9,8 +9,14 @@ License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 Simple plugin to switch between local and remote database by one click.
+Working without logging in every time we change database works only on localhost because of security reasons.
 
 == Description ==
 
 Create wp-config-remote.php file with remote database access and switch between them from admin bar.
+
+To works properly create the same users in both of sites ( remote and local ).
+
+To each wp-config you have to add constant LOGIN_USERNAME and put there username or e-mail you want to login after database switch.
+`define('LOGIN_USERNAME', 'username');`
 

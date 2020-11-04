@@ -85,7 +85,6 @@ function change_database() {
 			if ( file_exists( ABSPATH . 'wp-config-local.php' ) ) {
 				rename( ABSPATH . 'wp-config.php', ABSPATH . 'wp-config-remote.php' );
 				rename( ABSPATH . 'wp-config-local.php', ABSPATH . 'wp-config.php' );
-
 				wp_safe_redirect( admin_url() );
 			} else {
 				add_action( 'admin_notices', 'remote_database_config_exists' );
@@ -94,7 +93,6 @@ function change_database() {
 			if ( file_exists( ABSPATH . 'wp-config-remote.php' ) ) {
 				rename( ABSPATH . 'wp-config.php', ABSPATH . 'wp-config-local.php' );
 				rename( ABSPATH . 'wp-config-remote.php', ABSPATH . 'wp-config.php' );
-
 				wp_safe_redirect( admin_url() );
 			} else {
 				add_action( 'admin_notices', 'remote_database_config_exists' );
@@ -117,3 +115,41 @@ function check_active_database() {
 }
 
 add_action( 'init', 'check_active_database', 1 );
+
+/**
+ * Login without password.
+ *
+ * A WP_User object is returned if the credentials authenticate a user.
+ * WP_Error or null otherwise.
+ *
+ * @param null|WP_User|WP_Error $user     WP_User if the user is authenticated.
+ *                                        WP_Error or null otherwise.
+ * @param string                $username Username or email address.
+ * @param string                $password User password.
+ */
+function auto_login( $user, $username, $password ) {
+	if ( defined( 'LOGIN_USERNAME' ) ) {
+		$username = LOGIN_USERNAME;
+	}
+	if ( ! $user ) {
+		$user = get_user_by( 'email', $username );
+	}
+	if ( ! $user ) {
+		$user = get_user_by( 'login', $username );
+	}
+
+	if ( $user ) {
+		wp_set_current_user( $user->ID, $user->data->user_login );
+		wp_set_auth_cookie( $user->ID );
+		do_action( 'wp_login', $user->data->user_login );
+
+		wp_safe_redirect( admin_url() );
+		exit;
+	}
+}
+
+$whitelist = array( '127.0.0.1', '::1' );
+
+if ( isset( $_SERVER['REMOTE_ADDR'] ) && in_array( $_SERVER['REMOTE_ADDR'], $whitelist, true ) ) {
+	add_filter( 'authenticate', 'auto_login', 3, 10 );
+}
