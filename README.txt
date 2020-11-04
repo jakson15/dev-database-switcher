@@ -15,8 +15,6 @@ Working without logging in every time we change database works only on localhost
 
 Create wp-config-remote.php file with remote database access and switch between them from admin bar.
 
-To works properly create the same users in both of sites ( remote and local ).
-
-To each wp-config you have to add constant LOGIN_USERNAME and put there username or e-mail you want to login after database switch.
+To each wp-config you have add constant LOGIN_USERNAME and put there username or e-mail you want to login after database switch.
 `define('LOGIN_USERNAME', 'username');`
 
