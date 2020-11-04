@@ -31,15 +31,6 @@ if ( ! defined( 'WPINC' ) ) {
 define( 'DEV_DATABASE_SWITCHER_VERSION', '1.0.0' );
 
 /**
- * Fries during plugin activation.
- */
-function dbs_plugin_activate() {
-
-	add_option( 'dds_database_type', 'local' );
-}
-register_activation_hook( __FILE__, 'dds_plugin_activate' );
-
-/**
  * Dashboard admin info if proper file does not exists.
  */
 function remote_database_config_exists() {
@@ -95,8 +86,6 @@ function change_database() {
 				rename( ABSPATH . 'wp-config.php', ABSPATH . 'wp-config-remote.php' );
 				rename( ABSPATH . 'wp-config-local.php', ABSPATH . 'wp-config.php' );
 
-				update_option( 'dds_database_type', 'local' );
-
 				wp_safe_redirect( admin_url() );
 			} else {
 				add_action( 'admin_notices', 'remote_database_config_exists' );
@@ -106,14 +95,25 @@ function change_database() {
 				rename( ABSPATH . 'wp-config.php', ABSPATH . 'wp-config-local.php' );
 				rename( ABSPATH . 'wp-config-remote.php', ABSPATH . 'wp-config.php' );
 
-				update_option( 'dds_database_type', 'remote' );
-
 				wp_safe_redirect( admin_url() );
-			}  else {
+			} else {
 				add_action( 'admin_notices', 'remote_database_config_exists' );
 			}
 		}
 	}
 }
 
-add_action( 'init', 'change_database' );
+add_action( 'init', 'change_database', 2 );
+
+/**
+ * Check active database.
+ */
+function check_active_database() {
+	if ( file_exists( ABSPATH . 'wp-config-remote.php' ) ) {
+		update_option( 'dds_database_type', 'local' );
+	} elseif ( file_exists( ABSPATH . 'wp-config-local.php' ) ) {
+		update_option( 'dds_database_type', 'remote' );
+	}
+}
+
+add_action( 'init', 'check_active_database', 1 );
